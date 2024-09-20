@@ -1,23 +1,26 @@
-###Overview
+### Overview
 The code provides an implementation of a two-layer LSTM language model with dropout, designed for word-level prediction tasks. It trains on the PTB dataset and aims to achieve perplexity scores close to those reported in the original paper for the large model (test perplexity around 78).
 
 ### Features
-LSTM Model: Two-layer LSTM with 1500 hidden units and 1500-dimensional embeddings.
-Dropout Regularization: Dropout applied to embeddings and between LSTM layers.
-Backpropagation Through Time (BPTT): Sequence length of 35 time steps.
-Gradient Clipping: Prevents exploding gradients during training.
-Learning Rate Annealing: Reduces learning rate when validation loss plateaus.
-Modes of Operation:
-Training: Train the model on the PTB training data.
-Evaluation: Evaluate the model's perplexity on train, validation, and test sets.
-Interactive Testing: Generate next-word predictions interactively.
+- **LSTM Model**: Two-layer LSTM with 1500 hidden units and 1500-dimensional embeddings.
+- **Dropout Regularization**: Dropout applied to embeddings and between LSTM layers.
+- **Backpropagation Through Time (BPTT)**: Sequence length of 35 time steps.
+- **Gradient Clipping**: Prevents exploding gradients during training.
+- **Learning Rate Annealing**: Reduces learning rate when validation loss plateaus.
+
+**Modes of Operation**:
+- **Training**: Train the model on the PTB training data.
+- **Evaluation**: Evaluate the model's perplexity on train, validation, and test sets.
+- **Interactive Testing**: Generate next-word predictions interactively.
 
 ### Usage
-Training the Model
+
+#### Training the Model
 To train the model, run:
 
-
-'python main.py --mode train'
+```bash
+python main.py --mode train
+'''
 Optional Arguments:
 
 Specify a different data directory:
