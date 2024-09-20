@@ -3,15 +3,12 @@ import torch.nn as nn
 
 class RNNModel(nn.Module):
     
-    def __init__(self, rnn_type, ntoken, ninp, nhid, nlayers, dropout=0.65, tie_weights=False):
+    def __init__(self, ntoken, ninp, nhid, nlayers, dropout=0.65, tie_weights=False):
         super(RNNModel, self).__init__()
         self.drop = nn.Dropout(dropout)
         self.encoder = nn.Embedding(ntoken, ninp)
 
-        if rnn_type == 'LSTM':
-            self.rnn = nn.LSTM(ninp, nhid, nlayers, dropout=dropout)
-        else:
-            raise ValueError("Invalid RNN type. Use 'LSTM'.")
+        self.rnn = nn.LSTM(ninp, nhid, nlayers, dropout=dropout)
 
         self.decoder = nn.Linear(nhid, ntoken)
 
