@@ -127,7 +127,6 @@ def train():
 
 def test_interactive():
     model.eval()
-    hidden = model.init_hidden(1, device)
     word_to_idx = dataset.dictionary.word2idx
     idx_to_word = dataset.dictionary.idx2word
 
@@ -165,8 +164,8 @@ def calculate_perplexity():
         model.load_state_dict(torch.load(f, map_location=device))
 
     model.eval()
-    datasets = {'Train': train_data, 'Test': test_data, 'Validation': val_data}
-    batch_sizes = {'Train': args.batch_size, 'Test': eval_batch_size, 'Validation': eval_batch_size}
+    datasets = {'Train': train_data, 'Validation': val_data, 'Test': test_data}
+    batch_sizes = {'Train': args.batch_size, 'Validation': eval_batch_size, 'Test': eval_batch_size}
 
     for name, data_source in datasets.items():
         total_loss = 0.

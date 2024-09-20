@@ -27,10 +27,11 @@ class RNNModel(nn.Module):
         self.nlayers = nlayers
 
     def init_weights(self):
-        initrange = 0.04  # Smaller initrange as per some implementations
-        self.encoder.weight.data.uniform_(-initrange, initrange)
-        self.decoder.bias.data.zero_()
-        self.decoder.weight.data.uniform_(-initrange, initrange)
+       initrange = 0.1
+       self.encoder.weight.data.uniform_(-initrange, initrange)
+       self.decoder.bias.data.zero_()
+       self.decoder.weight.data.uniform_(-initrange, initrange)
+
 
     def forward(self, input_seq, hidden):
         emb = self.drop(self.encoder(input_seq))
