@@ -1,4 +1,4 @@
-### Overview
+# Overview
 The code provides an implementation of a two-layer LSTM language model with dropout, designed for word-level prediction tasks. It trains on the PTB dataset and aims to achieve perplexity scores close to those reported in the original paper for the large model (test perplexity around 78).
 
 ### Features
