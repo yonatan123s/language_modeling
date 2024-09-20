@@ -2,8 +2,7 @@ import torch.nn as nn
 
 
 class RNNModel(nn.Module):
-    """An LSTM language model similar to the original large model from Zaremba et al. (2014)."""
-
+    
     def __init__(self, rnn_type, ntoken, ninp, nhid, nlayers, dropout=0.65, tie_weights=False):
         super(RNNModel, self).__init__()
         self.drop = nn.Dropout(dropout)
@@ -16,7 +15,7 @@ class RNNModel(nn.Module):
 
         self.decoder = nn.Linear(nhid, ntoken)
 
-        # Optionally tie weights as in the paper
+        # Optionally tie weights 
         if tie_weights:
             if nhid != ninp:
                 raise ValueError('When tying weights, nhid must be equal to ninp')
