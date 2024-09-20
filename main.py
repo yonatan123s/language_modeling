@@ -3,7 +3,6 @@ import time
 import math
 import torch
 import torch.nn as nn
-import torch.optim as optim
 from data import PTBDataset
 from model import RNNModel
 
@@ -32,6 +31,10 @@ parser.add_argument('--epochs_decay', type=int, default=6,
                     help='number of epochs before learning rate decay')
 parser.add_argument('--tie_weights', action='store_true',
                     help='tie the word embedding and softmax weights')
+parser.add_argument('--mode', choices=['train', 'eval', 'test'], required=True,
+                    help='Mode to run the script: train, eval, test')
+parser.add_argument('--checkpoint', type=str, default='weights.pth',
+                    help='Path to save/load the model checkpoint')
 args = parser.parse_args()
 
 # Set the random seed for reproducibility
@@ -70,7 +73,7 @@ model = RNNModel('LSTM', ntokens, args.emsize, args.nhid, args.nlayers, args.dro
 criterion = nn.CrossEntropyLoss()
 
 ###############################################################################
-# Training code
+# Helper functions
 ###############################################################################
 
 def get_batch(source, i):
@@ -82,7 +85,6 @@ def get_batch(source, i):
 def evaluate(data_source):
     model.eval()
     total_loss = 0.
-    ntokens = len(dataset.dictionary)
     hidden = model.init_hidden(eval_batch_size, device)
     with torch.no_grad():
         for i in range(0, data_source.size(0) - 1, args.bptt):
@@ -97,7 +99,6 @@ def train():
     model.train()
     total_loss = 0.
     start_time = time.time()
-    ntokens = len(dataset.dictionary)
     hidden = model.init_hidden(args.batch_size, device)
     for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
         data, targets = get_batch(train_data, i)
@@ -107,7 +108,7 @@ def train():
         loss = criterion(output, targets)
         loss.backward()
 
-        # `clip_grad_norm` helps prevent the exploding gradient problem.
+        # `clip_grad_norm_` helps prevent the exploding gradient problem.
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
         for p in model.parameters():
             p.data.add_(p.grad, alpha=-lr)
@@ -124,39 +125,111 @@ def train():
             total_loss = 0
             start_time = time.time()
 
-# Loop over epochs.
-lr = args.lr
-best_val_loss = None
+def test_interactive():
+    model.eval()
+    hidden = model.init_hidden(1, device)
+    word_to_idx = dataset.dictionary.word2idx
+    idx_to_word = dataset.dictionary.idx2word
 
-try:
-    for epoch in range(1, args.epochs + 1):
-        epoch_start_time = time.time()
-        train()
-        val_loss = evaluate(val_data)
-        print('-' * 89)
-        print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
-              'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
-                                         val_loss, math.exp(val_loss)))
-        print('-' * 89)
+    print("Enter 'end' or 'stop' to exit.")
+    while True:
+        input_seq = input("Enter a sequence of words: ")
+        if input_seq.lower() in ['end', 'stop']:
+            break
+        words = input_seq.strip().split()
+        # Convert words to indices
+        input_indices = []
+        for word in words:
+            if word in word_to_idx:
+                input_indices.append(word_to_idx[word])
+            else:
+                print(f"Word '{word}' not in vocabulary, using <unk> token.")
+                input_indices.append(word_to_idx.get('<unk>', 0))
 
-        # Save the model if the validation loss is the best we've seen so far.
-        if not best_val_loss or val_loss < best_val_loss:
-            with open('weights.pth', 'wb') as f:
-                torch.save(model.state_dict(), f)
-            best_val_loss = val_loss
-        else:
-            # Anneal the learning rate if no improvement has been seen.
-            lr /= 1.2
-except KeyboardInterrupt:
-    print('Exiting from training early')
+        input_tensor = torch.tensor(input_indices, dtype=torch.long).unsqueeze(1).to(device)
+        hidden = model.init_hidden(1, device)
 
-# Load the best saved model.
-with open('weights.pth', 'rb') as f:
-    model.load_state_dict(torch.load(f))
+        with torch.no_grad():
+            output, hidden = model(input_tensor, hidden)
+            last_output = output[-1]
+            probabilities = torch.softmax(last_output, dim=0)
+            top5_prob, top5_idx = torch.topk(probabilities, k=5)
+            top5_words = [idx_to_word[idx] for idx in top5_idx.tolist()]
+            print("Top 5 predictions:")
+            for i, (word, prob) in enumerate(zip(top5_words, top5_prob.tolist())):
+                print(f"{i+1}. {word} ({prob*100:.2f}%)")
 
-# Run on test data.
-test_loss = evaluate(test_data)
-print('=' * 89)
-print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
-    test_loss, math.exp(test_loss)))
-print('=' * 89)
+def calculate_perplexity():
+    # Load the saved model
+    with open(args.checkpoint, 'rb') as f:
+        model.load_state_dict(torch.load(f, map_location=device))
+
+    model.eval()
+    datasets = {'Train': train_data, 'Test': test_data, 'Validation': val_data}
+    batch_sizes = {'Train': args.batch_size, 'Test': eval_batch_size, 'Validation': eval_batch_size}
+
+    for name, data_source in datasets.items():
+        total_loss = 0.
+        hidden = model.init_hidden(batch_sizes[name], device)
+        with torch.no_grad():
+            for i in range(0, data_source.size(0) - 1, args.bptt):
+                data, targets = get_batch(data_source, i)
+                output, hidden = model(data, hidden)
+                output_flat = output
+                total_loss += len(data) * criterion(output_flat, targets).item()
+                hidden = tuple(h.detach() for h in hidden)
+        avg_loss = total_loss / (len(data_source) - 1)
+        perplexity = math.exp(avg_loss)
+        print(f'{name} Perplexity: {perplexity:.2f}')
+
+###############################################################################
+# Main Execution
+###############################################################################
+
+if args.mode == 'train':
+    # Training Loop
+    lr = args.lr
+    best_val_loss = None
+
+    try:
+        for epoch in range(1, args.epochs + 1):
+            epoch_start_time = time.time()
+            train()
+            val_loss = evaluate(val_data)
+            print('-' * 89)
+            print('| end of epoch {:3d} | time: {:5.2f}s | valid loss {:5.2f} | '
+                  'valid ppl {:8.2f}'.format(epoch, (time.time() - epoch_start_time),
+                                             val_loss, math.exp(val_loss)))
+            print('-' * 89)
+
+            # Save the model if the validation loss is the best we've seen so far.
+            if not best_val_loss or val_loss < best_val_loss:
+                with open(args.checkpoint, 'wb') as f:
+                    torch.save(model.state_dict(), f)
+                best_val_loss = val_loss
+            else:
+                # Anneal the learning rate if no improvement has been seen.
+                lr /= 1.2
+    except KeyboardInterrupt:
+        print('Exiting from training early')
+
+    # Load the best saved model.
+    with open(args.checkpoint, 'rb') as f:
+        model.load_state_dict(torch.load(f))
+
+    # Run on test data.
+    test_loss = evaluate(test_data)
+    print('=' * 89)
+    print('| End of training | test loss {:5.2f} | test ppl {:8.2f}'.format(
+        test_loss, math.exp(test_loss)))
+    print('=' * 89)
+
+elif args.mode == 'eval':
+    # Evaluate the model on train, validation, and test datasets
+    calculate_perplexity()
+
+elif args.mode == 'test':
+    # Load the saved model
+    with open(args.checkpoint, 'rb') as f:
+        model.load_state_dict(torch.load(f, map_location=device))
+    test_interactive()

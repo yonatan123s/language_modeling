@@ -1,5 +1,4 @@
 import torch.nn as nn
-import torch
 
 
 class RNNModel(nn.Module):
