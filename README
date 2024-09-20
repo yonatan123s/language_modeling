@@ -1,7 +1,7 @@
-Overview
+### Overview
 The code provides an implementation of a two-layer LSTM language model with dropout, designed for word-level prediction tasks. It trains on the PTB dataset and aims to achieve perplexity scores close to those reported in the original paper for the large model (test perplexity around 78).
 
-Features
+### Features
 LSTM Model: Two-layer LSTM with 1500 hidden units and 1500-dimensional embeddings.
 Dropout Regularization: Dropout applied to embeddings and between LSTM layers.
 Backpropagation Through Time (BPTT): Sequence length of 35 time steps.
@@ -11,39 +11,34 @@ Modes of Operation:
 Training: Train the model on the PTB training data.
 Evaluation: Evaluate the model's perplexity on train, validation, and test sets.
 Interactive Testing: Generate next-word predictions interactively.
-Usage
+
+### Usage
 Training the Model
 To train the model, run:
 
-css
-Copy code
-python main.py --mode train
+
+'python main.py --mode train'
 Optional Arguments:
 
 Specify a different data directory:
 
-css
-Copy code
-python main.py --mode train --data path/to/ptbdataset
+'python main.py --mode train --data path/to/ptbdataset'
 Adjust hyperparameters (e.g., learning rate, number of epochs):
 
-css
-Copy code
-python main.py --mode train --lr 1.0 --epochs 39
+
+'python main.py --mode train --lr 1.0 --epochs 39'
 Evaluating the Model
 To evaluate the model's perplexity on the train, validation, and test datasets, run:
 
-css
-Copy code
-python main.py --mode eval --checkpoint weights.pth
+
+'python main.py --mode eval --checkpoint weights.pth'
 Ensure that the --checkpoint argument points to the saved model weights.
 
 Interactive Testing
 To interactively test the model and get top-5 next-word predictions, run:
 
-css
-Copy code
-python main.py --mode test --checkpoint weights.pth
+
+'python main.py --mode test --checkpoint weights.pth'
 Enter a sequence of words when prompted, and the model will output the top-5 predicted next words with their probabilities.
 
 Arguments and Hyperparameters
@@ -73,14 +68,12 @@ Runtime Parameters:
 --checkpoint: Path to save/load the model checkpoint (default: weights.pth).
 Example Commands
 Train the Model
-css
-Copy code
-python main.py --mode train --data ptbdataset --epochs 39 --lr 1.0
+
+
+'python main.py --mode train --data ptbdataset --epochs 39 --lr 1.0'
 Evaluate the Model
-css
-Copy code
-python main.py --mode eval --checkpoint weights.pth
+
+'python main.py --mode eval --checkpoint weights.pth'
 Interactive Testing
-css
-Copy code
-python main.py --mode test --checkpoint weights.pth
+
+'python main.py --mode test --checkpoint weights.pth'
