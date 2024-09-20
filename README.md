@@ -25,23 +25,31 @@ Optional Arguments:
 
 Specify a different data directory:
 
-'python main.py --mode train --data path/to/ptbdataset'
+```
+python main.py --mode train --data path/to/ptbdataset
+```
 Adjust hyperparameters (e.g., learning rate, number of epochs):
 
 
-'python main.py --mode train --lr 1.0 --epochs 39'
+```
+python main.py --mode train --lr 1.0 --epochs 39
+```
 Evaluating the Model
 To evaluate the model's perplexity on the train, validation, and test datasets, run:
 
 
-'python main.py --mode eval --checkpoint weights.pth'
+```
+python main.py --mode eval --checkpoint weights.pth
+```
 Ensure that the --checkpoint argument points to the saved model weights.
 
 Interactive Testing
 To interactively test the model and get top-5 next-word predictions, run:
 
 
-'python main.py --mode test --checkpoint weights.pth'
+```
+python main.py --mode test --checkpoint weights.pth
+```
 Enter a sequence of words when prompted, and the model will output the top-5 predicted next words with their probabilities.
 
 Arguments and Hyperparameters
@@ -73,10 +81,17 @@ Example Commands
 Train the Model
 
 
-'python main.py --mode train --data ptbdataset --epochs 39 --lr 1.0'
+```
+python main.py --mode train --data ptbdataset --epochs 39 --lr 1.0
+```
 Evaluate the Model
 
-'python main.py --mode eval --checkpoint weights.pth'
+```
+python main.py --mode eval --checkpoint weights.pth
+```
 Interactive Testing
 
-'python main.py --mode test --checkpoint weights.pth'
+```
+python main.py --mode test --checkpoint weights.pth
+```
+```
