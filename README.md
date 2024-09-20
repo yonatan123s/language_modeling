@@ -18,9 +18,9 @@ The code provides an implementation of a two-layer LSTM language model with drop
 #### Training the Model
 To train the model, run:
 
-```bash
+```
 python main.py --mode train
-'''
+```
 Optional Arguments:
 
 Specify a different data directory:
