@@ -68,7 +68,7 @@ test_data = batchify(dataset.test_data, eval_batch_size)
 # Build the model
 ###############################################################################
 
-model = RNNModel('LSTM', ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tie_weights).to(device)
+model = RNNModel(ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tie_weights).to(device)
 
 criterion = nn.CrossEntropyLoss()
 
