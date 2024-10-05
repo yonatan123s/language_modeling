@@ -5,9 +5,13 @@ import torch
 import torch.nn as nn
 from data import PTBDataset
 from model import RNNModel
+from tqdm import tqdm
+from ntasgd import NTASGD
+import numpy as np
+
 
 parser = argparse.ArgumentParser(description='PyTorch Penn Treebank LSTM Language Model')
-parser.add_argument('--data', type=str, default='../next_word_pred/ptbdataset',
+parser.add_argument('--data', type=str, default='ptbdataset',
                     help='location of the data corpus')
 parser.add_argument('--epochs', type=int, default=39,
                     help='upper epoch limit (original paper used 39 epochs)')
@@ -76,11 +80,20 @@ criterion = nn.CrossEntropyLoss()
 # Helper functions
 ###############################################################################
 
+def get_seq_len(bptt):
+    seq_len = bptt if np.random.random() < 0.95 else bptt / 2
+    seq_len = round(np.random.normal(seq_len, 5))
+    while seq_len <= 5 or seq_len >= 90:
+        seq_len = bptt if np.random.random() < 0.95 else bptt / 2
+        seq_len = round(np.random.normal(seq_len, 5))
+    return seq_len
+
 def get_batch(source, i):
-    seq_len = min(args.bptt, len(source) - 1 - i)
+    seq_len = get_seq_len(args.bptt)
+    lr = seq_len/args.bptt*args.lr
     data = source[i:i+seq_len]
     target = source[i+1:i+1+seq_len].reshape(-1)
-    return data, target
+    return data, target, lr
 
 def evaluate(data_source):
     model.eval()
@@ -100,19 +113,18 @@ def train():
     total_loss = 0.
     start_time = time.time()
     hidden = model.init_hidden(args.batch_size, device)
-    for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
-        data, targets = get_batch(train_data, i)
+
+    # Use tqdm to display a progress bar
+    for batch, i in enumerate(tqdm(range(0, train_data.size(0) - 1, args.bptt), desc="Training")):
+        data, targets, lr = get_batch(train_data, i)
+        optimizer.lr(lr)
         hidden = tuple(h.detach() for h in hidden)
         model.zero_grad()
         output, hidden = model(data, hidden)
         loss = criterion(output, targets)
         loss.backward()
 
-        # `clip_grad_norm_` helps prevent the exploding gradient problem.
-        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-        for p in model.parameters():
-            p.data.add_(p.grad, alpha=-lr)
-
+        optimizer.step()
         total_loss += loss.item()
 
         if batch % 200 == 0 and batch > 0:
@@ -124,6 +136,7 @@ def train():
                       elapsed * 1000 / 200, cur_loss, math.exp(cur_loss)))
             total_loss = 0
             start_time = time.time()
+
 
 def test_interactive():
     model.eval()
@@ -187,7 +200,9 @@ def calculate_perplexity():
 
 if args.mode == 'train':
     # Training Loop
+
     lr = args.lr
+    optimizer = NTASGD(model.parameters(), lr, fine_tuning=True)
     best_val_loss = None
 
     try:
