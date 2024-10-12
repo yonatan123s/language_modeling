@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 from data import PTBDataset
 from model import RNNModel
+from ntasgd import NTASGD
 
 parser = argparse.ArgumentParser(description='PyTorch Penn Treebank LSTM Language Model')
 parser.add_argument('--data', type=str, default='../next_word_pred/ptbdataset',
@@ -35,8 +36,14 @@ parser.add_argument('--mode', choices=['train', 'eval', 'test'], required=True,
                     help='Mode to run the script: train, eval, test')
 parser.add_argument('--checkpoint', type=str, default='weights.pth',
                     help='Path to save/load the model checkpoint')
-args = parser.parse_args()
 
+parser.add_argument("--weight_decay", type=float, default=1.2e-6, help="The weight decay parameter.")
+parser.add_argument("--non_mono", type=int, default=5, help="The masking length for non-monotonicity. Referred to as 'n' in the paper.")
+parser.add_argument("--dropout_i", type=float, default=0.4, help="The dropout parameter on word vectors.")
+parser.add_argument("--dropout_l", type=float, default=0.3, help="The dropout parameter between LSTM layers.")
+parser.add_argument("--dropout_o", type=float, default=0.4, help="The dropout parameter on the last LSTM layer.")
+parser.add_argument("--dropout_e", type=float, default=0.1, help="The dropout parameter on the embedding layer.")
+args = parser.parse_args()
 # Set the random seed for reproducibility
 torch.manual_seed(1111)
 
@@ -68,9 +75,10 @@ test_data = batchify(dataset.test_data, eval_batch_size)
 # Build the model
 ###############################################################################
 
-model = RNNModel(ntokens, args.emsize, args.nhid, args.nlayers, args.dropout, args.tie_weights).to(device)
+model = RNNModel(ntokens, args.emsize, args.nhid, args.nlayers, args.dropout_i, args.dropout_l, args.dropout_o, args.dropout_e, args.tie_weights).to(device)
 
 criterion = nn.CrossEntropyLoss()
+optimizer = NTASGD(model.parameters(), lr=args.lr, n=args.non_mono, weight_decay=args.weight_decay, fine_tuning=False)
 
 ###############################################################################
 # Helper functions
@@ -107,11 +115,8 @@ def train():
         output, hidden = model(data, hidden)
         loss = criterion(output, targets)
         loss.backward()
-
-        # `clip_grad_norm_` helps prevent the exploding gradient problem.
-        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-        for p in model.parameters():
-            p.data.add_(p.grad, alpha=-lr)
+        optimizer.step()
+        optimizer.zero_grad()
 
         total_loss += loss.item()
 
