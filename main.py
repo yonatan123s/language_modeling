@@ -6,6 +6,7 @@ import torch.nn as nn
 from data import PTBDataset
 from model import RNNModel
 from ntasgd import NTASGD
+import numpy as np
 
 parser = argparse.ArgumentParser(description='PyTorch Penn Treebank LSTM Language Model')
 parser.add_argument('--data', type=str, default='../next_word_pred/ptbdataset',
@@ -56,6 +57,16 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dataset = PTBDataset(args.data)
 ntokens = len(dataset.dictionary)
 
+
+def get_seq_len(bptt):
+    seq_len = bptt if np.random.random() < 0.95 else bptt / 2
+    seq_len = round(np.random.normal(seq_len, 5))
+    while seq_len <= 5 or seq_len >= 90:
+        seq_len = bptt if np.random.random() < 0.95 else bptt / 2
+        seq_len = round(np.random.normal(seq_len, 5))
+    return seq_len
+
+
 # Function to batchify data
 def batchify(data, batch_size):
     # Work out how cleanly we can divide the dataset into batch_size parts.
@@ -90,6 +101,14 @@ def get_batch(source, i):
     target = source[i+1:i+1+seq_len].reshape(-1)
     return data, target
 
+def get_batch_train(source, i):
+    seq_len = get_seq_len(args.bptt)
+    seq_len = min(seq_len, len(source) - 1 - i)
+    lr = seq_len/args.bptt*args.lr
+    data = source[i:i+seq_len]
+    target = source[i+1:i+1+seq_len].reshape(-1)
+    return data, target, lr
+
 def evaluate(data_source):
     model.eval()
     total_loss = 0.
@@ -109,7 +128,8 @@ def train():
     start_time = time.time()
     hidden = model.init_hidden(args.batch_size, device)
     for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
-        data, targets = get_batch(train_data, i)
+        data, targets, lr = get_batch_train(train_data, i)
+        optimizer.lr(lr)
         hidden = tuple(h.detach() for h in hidden)
         model.zero_grad()
         output, hidden = model(data, hidden)
